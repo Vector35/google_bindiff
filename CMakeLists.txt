@@ -384,9 +384,9 @@ install(TARGETS bindiff
         RUNTIME DESTINATION ${CMAKE_BINARY_DIR})
 
 # IDA Pro plugins
-if(idasdk_FOUND)
+if(BINDIFF_ENABLE_IDAPRO AND idasdk_FOUND)
   add_subdirectory(ida)
-endif(idasdk_FOUND)
+endif()
 
 # Utility programs. For now, only contains a tool to modify the BinDiff
 # config from the installer/package scripts.

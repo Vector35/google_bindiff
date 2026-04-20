@@ -27,6 +27,8 @@ if(NOT TARGET sqlite)
   endif()
 endif()
 
-find_package(idasdk)
+if(BINDIFF_ENABLE_IDAPRO)
+  find_package(idasdk)
+endif()
 
 find_package(Protobuf 3.14 REQUIRED) # Make protobuf_generate_cpp available
