@@ -19,7 +19,7 @@ FetchContent_Declare(sqlite
 )
 FetchContent_GetProperties(sqlite)
 if(NOT sqlite_POPULATED)
-  FetchContent_Populate(sqlite)
+  FetchContent_MakeAvailable(sqlite)
   add_library(sqlite STATIC
     ${sqlite_SOURCE_DIR}/sqlite3.c
   )
