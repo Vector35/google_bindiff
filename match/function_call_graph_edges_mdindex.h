@@ -33,7 +33,7 @@ class MatchingStepEdgesCallGraphMdIndex : public BaseMatchingStepEdgesMdIndex {
             MatchingContext::kCallGraphMdIndexSecondary) {}
 
  protected:
-  EdgeFeature MakeEdgeFeature(CallGraph::Edge edge, const CallGraph& call_graph,
+  EdgeFeature MakeEdgeFeature(CallGraph::Edge edge, CallGraph& call_graph,
                               FlowGraph* source, FlowGraph* target) override {
     return {edge, call_graph.GetMdIndex(edge), 0.0};
   }

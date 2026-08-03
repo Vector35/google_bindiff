@@ -22,22 +22,21 @@ namespace security::bindiff {
 // Matches functions based on their local call graph neighborhoods. Calls and
 // callees are only followed two levels deep as seen from the function in
 // question.
-class MatchingStepEdgesProximityMdIndex : public MatchingStep {
+class MatchingStepEdgesProximityMdIndex
+    : public BaseMatchingStepEdgesMdIndex {
  public:
   MatchingStepEdgesProximityMdIndex()
-      : MatchingStep("function: edges proximity MD index",
-                     "Function: Edges Proximity MD Index") {}
+      : BaseMatchingStepEdgesMdIndex(
+            "function: edges proximity MD index",
+            "Function: Edges Proximity MD Index",
+            MatchingContext::kProximityMdIndexPrimary,
+            MatchingContext::kProximityMdIndexSecondary) {}
 
-  bool FindFixedPoints(const FlowGraph* primary_parent,
-                       const FlowGraph* secondary_parent,
-                       FlowGraphs& /*flow_graphs1*/,
-                       FlowGraphs& /*flow_graphs2*/, MatchingContext& context,
-                       MatchingSteps& matching_steps,
-                       const MatchingStepsFlowGraph& default_steps) override;
-
- private:
-  void GetUnmatchedEdgesProximityMdIndex(CallGraph* call_graph,
-                                         EdgeFeatures* edges);
+ protected:
+  EdgeFeature MakeEdgeFeature(CallGraph::Edge edge, CallGraph& call_graph,
+                              FlowGraph*, FlowGraph*) override {
+    return {edge, call_graph.GetProximityMdIndex(edge), 0.0};
+  }
 };
 
 }  // namespace security::bindiff

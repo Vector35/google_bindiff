@@ -49,6 +49,8 @@ class MatchingContext {
     kFlowGraphMdIndexSecondary,
     kCallGraphMdIndexPrimary,
     kCallGraphMdIndexSecondary,
+    kProximityMdIndexPrimary,
+    kProximityMdIndexSecondary,
     kEdgeProperies,
     kMaxFeature
   };
