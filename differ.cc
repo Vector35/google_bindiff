@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <ios>
 #include <memory>
@@ -38,7 +39,6 @@
 #include "third_party/zynamics/bindiff/reader.h"
 #include "third_party/zynamics/bindiff/statistics.h"
 #include "third_party/zynamics/binexport/binexport2.pb.h"
-#include "third_party/zynamics/binexport/util/filesystem.h"
 #include "third_party/zynamics/binexport/util/format.h"
 #include "third_party/zynamics/binexport/util/status_macros.h"
 #include "third_party/zynamics/binexport/util/types.h"
@@ -165,14 +165,21 @@ absl::Status Read(const std::string& filename,
     flow_graph_infos->clear();
   }
 
-  constexpr int64_t kMinFileSize = 8;
-  NA_ASSIGN_OR_RETURN(int64_t file_size, GetFileSize(filename));
+  std::ifstream stream(std::filesystem::u8path(filename),
+                       std::ios::binary | std::ios::ate);
+  if (!stream) {
+    return absl::UnknownError(
+        absl::StrCat("cannot open exported file: ", filename));
+  }
+
+  constexpr std::streamoff kMinFileSize = 8;
+  const std::streamoff file_size = stream.tellg();
   if (file_size <= kMinFileSize) {
     return absl::FailedPreconditionError(
         absl::StrCat("file too small: ", filename));
   }
 
-  std::ifstream stream(filename, std::ios::binary);
+  stream.seekg(0);
   BinExport2 proto;
   if (!proto.ParseFromIstream(&stream)) {
     return absl::FailedPreconditionError(
