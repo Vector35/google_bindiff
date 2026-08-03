@@ -110,22 +110,22 @@ class BaseMatchingStepEdgesMdIndex : public MatchingStep {
 
  protected:
   virtual EdgeFeature MakeEdgeFeature(CallGraph::Edge edge,
-                                      const CallGraph& call_graph,
-                                      FlowGraph* source, FlowGraph* target) = 0;
+                                      CallGraph& call_graph, FlowGraph* source,
+                                      FlowGraph* target) = 0;
 
  private:
   enum CallGraphType { kPrimaryCallGraph, kSecondaryCallGraph };
+  struct EdgeFeatureCache;
 
-  static void FeatureDestructor(EdgeFeatures* feature);
+  static void FeatureDestructor(EdgeFeatureCache* feature);
 
   void GetUnmatchedEdgesMdIndex(MatchingContext* context, CallGraphType type,
                                 const FlowGraphs& flow_graphs,
                                 EdgeFeatures* edges);
 
   // This functions takes all features and returns only currently relevant ones.
-  void FilterResults(const EdgeFeatures& all_features,
-                     const CallGraph& call_graph, const FlowGraphs& flow_graphs,
-                     EdgeFeatures* edges);
+  void FilterResults(const EdgeFeatureCache& cache, const CallGraph& call_graph,
+                     const FlowGraphs& flow_graphs, EdgeFeatures* edges);
 
   MatchingContext::FeatureId primary_feature_;
   MatchingContext::FeatureId secondary_feature_;

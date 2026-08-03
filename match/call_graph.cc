@@ -17,6 +17,7 @@
 #include <iomanip>
 
 #include "third_party/absl/container/flat_hash_map.h"
+#include "third_party/absl/container/flat_hash_set.h"
 #include "third_party/absl/log/check.h"
 #include "third_party/absl/log/log.h"
 #include "third_party/absl/memory/memory.h"
@@ -109,8 +110,6 @@ bool FindFixedPointsEdge(const FlowGraph* primary_parent,
   matching_steps->pop_front();
 
   bool fixed_points_discovered = false;
-  std::sort(edges1->begin(), edges1->end(), &KeyLessThan);
-  std::sort(edges2->begin(), edges2->end(), &KeyLessThan);
   EdgeFeatures::iterator edges1_it = edges1->begin();
   EdgeFeatures::iterator edges2_it = edges2->begin();
   for (;;) {
@@ -239,7 +238,13 @@ MatchingStep::MatchingStep(std::string name, std::string display_name)
       display_name_(std::move(display_name)),
       confidence_(GetConfidenceFromConfig(name_)) {}
 
-void BaseMatchingStepEdgesMdIndex::FeatureDestructor(EdgeFeatures* feature) {
+struct BaseMatchingStepEdgesMdIndex::EdgeFeatureCache {
+  EdgeFeatures features;
+  absl::flat_hash_map<const FlowGraph*, std::vector<size_t>> edge_indices;
+};
+
+void BaseMatchingStepEdgesMdIndex::FeatureDestructor(
+    EdgeFeatureCache* feature) {
   delete feature;
 }
 
@@ -274,20 +279,20 @@ bool BaseMatchingStepEdgesMdIndex::FindFixedPoints(
 }
 
 void BaseMatchingStepEdgesMdIndex::GetUnmatchedEdgesMdIndex(
-    MatchingContext* context, CallGraphType type, const FlowGraphs& flow_graphs,
-    EdgeFeatures* edges) {
+    MatchingContext* context, CallGraphType type,
+    const FlowGraphs& flow_graphs, EdgeFeatures* edges) {
   CHECK(edges->empty());
   bool is_primary = type == kPrimaryCallGraph;
-  const CallGraph& call_graph = is_primary ? context->primary_call_graph_
-                                           : context->secondary_call_graph_;
+  CallGraph& call_graph = is_primary ? context->primary_call_graph_
+                                     : context->secondary_call_graph_;
   // We go to great lengths to not keep any writeable data inside the step
   // class, instead relying on matching context (see MatchingStep
   // declaration), as step is used by multiple threads and must be reentrant.
   MatchingContext::FeatureId feature_id =
       is_primary ? primary_feature_ : secondary_feature_;
-  EdgeFeatures* cached =
+  EdgeFeatureCache* cached =
       context->HasCachedFeatures(feature_id)
-          ? context->GetCachedFeatures<EdgeFeatures*>(feature_id)
+          ? context->GetCachedFeatures<EdgeFeatureCache*>(feature_id)
           : nullptr;
   if (cached) {
     FilterResults(*cached, call_graph, flow_graphs, edges);
@@ -295,7 +300,7 @@ void BaseMatchingStepEdgesMdIndex::GetUnmatchedEdgesMdIndex(
   }
   CallGraph::EdgeIterator edge;
   CallGraph::EdgeIterator end;
-  auto edge_features = std::make_unique<EdgeFeatures>();
+  auto cache = std::make_unique<EdgeFeatureCache>();
   for (auto [edge, end] = boost::edges(call_graph.GetGraph()); edge != end;
        ++edge) {
     // TODO(cblichmann): Refactor. There is a (near) identical copy of the
@@ -318,40 +323,81 @@ void BaseMatchingStepEdgesMdIndex::GetUnmatchedEdgesMdIndex(
     if (!target || target->GetMdIndex() == 0.0) {
       continue;
     }
-    edge_features->push_back(
+    cache->features.push_back(
         MakeEdgeFeature(*edge, call_graph, source, target));
   }
-  FilterResults(*edge_features, call_graph, flow_graphs, edges);
+  std::sort(cache->features.begin(), cache->features.end(), &KeyLessThan);
+  for (size_t i = 0; i < cache->features.size(); ++i) {
+    const CallGraph::Edge& edge = cache->features[i].edge;
+    FlowGraph* source =
+        call_graph.GetFlowGraph(boost::source(edge, call_graph.GetGraph()));
+    FlowGraph* target =
+        call_graph.GetFlowGraph(boost::target(edge, call_graph.GetGraph()));
+    cache->edge_indices[source].push_back(i);
+    if (target != source) {
+      cache->edge_indices[target].push_back(i);
+    }
+  }
+  FilterResults(*cache, call_graph, flow_graphs, edges);
   if (context->HasCachedFeatures(feature_id)) {
-    context->SetCachedFeatures(feature_id, edge_features.release(),
+    context->SetCachedFeatures(feature_id, cache.release(),
                                FeatureDestructor);
   }
 }
 
 // This functions takes all features and returns only currently relevant ones.
 void BaseMatchingStepEdgesMdIndex::FilterResults(
-    const EdgeFeatures& all_features, const CallGraph& call_graph,
+    const EdgeFeatureCache& cache, const CallGraph& call_graph,
     const FlowGraphs& flow_graphs, EdgeFeatures* edges) {
-  for (const auto& edge_feature : all_features) {
+  size_t incident_count = 0;
+  for (const FlowGraph* flow_graph : flow_graphs) {
+    if (const auto found = cache.edge_indices.find(flow_graph);
+        found != cache.edge_indices.end()) {
+      incident_count += found->second.size();
+    }
+  }
+
+  if (incident_count >= cache.features.size()) {
+    const absl::flat_hash_set<const FlowGraph*> candidates(flow_graphs.begin(),
+                                                           flow_graphs.end());
+    for (const auto& edge_feature : cache.features) {
+      const CallGraph::Edge& edge = edge_feature.edge;
+      FlowGraph* source =
+          call_graph.GetFlowGraph(boost::source(edge, call_graph.GetGraph()));
+      FlowGraph* target =
+          call_graph.GetFlowGraph(boost::target(edge, call_graph.GetGraph()));
+      if (source->GetFixedPoint() != 0 && target->GetFixedPoint() != 0) {
+        continue;
+      }
+      if (candidates.contains(source) || candidates.contains(target)) {
+        edges->push_back(edge_feature);
+      }
+    }
+    return;
+  }
+
+  absl::flat_hash_set<size_t> selected_indices;
+  selected_indices.reserve(incident_count);
+  for (const FlowGraph* flow_graph : flow_graphs) {
+    if (const auto found = cache.edge_indices.find(flow_graph);
+        found != cache.edge_indices.end()) {
+      selected_indices.insert(found->second.begin(), found->second.end());
+    }
+  }
+  std::vector<size_t> sorted_indices(selected_indices.begin(),
+                                     selected_indices.end());
+  std::sort(sorted_indices.begin(), sorted_indices.end());
+  edges->reserve(sorted_indices.size());
+  for (const size_t index : sorted_indices) {
+    const EdgeFeature& edge_feature = cache.features[index];
     const CallGraph::Edge& edge = edge_feature.edge;
     FlowGraph* source =
         call_graph.GetFlowGraph(boost::source(edge, call_graph.GetGraph()));
     FlowGraph* target =
         call_graph.GetFlowGraph(boost::target(edge, call_graph.GetGraph()));
-    // Already a fixed point, no need to evaluate again.
-    if (source->GetFixedPoint() != 0 && target->GetFixedPoint() != 0) {
-      continue;
+    if (source->GetFixedPoint() == 0 || target->GetFixedPoint() == 0) {
+      edges->push_back(edge_feature);
     }
-
-    // TODO(cblichmann): Understand why this condition got here in the first
-    //                   place. It is expensive to calculate and at least on the
-    //                   libssl sample _reduces_ result quality instead of
-    //                   increasing it.
-    if (flow_graphs.count(target) == 0 && flow_graphs.count(source) == 0) {
-      continue;
-    }
-
-    edges->push_back(edge_feature);
   }
 }
 
