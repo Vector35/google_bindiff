@@ -19,10 +19,10 @@
 #include <stdexcept>
 
 #include "third_party/absl/status/status.h"
-#include "third_party/absl/status/status_macros.h"
 #include "third_party/absl/status/statusor.h"
 #include "third_party/absl/strings/str_cat.h"
 #include "third_party/sqlite/src/sqlite3.h"
+#include "third_party/zynamics/bindiff/status_macros.h"
 
 namespace security::bindiff {
 namespace {

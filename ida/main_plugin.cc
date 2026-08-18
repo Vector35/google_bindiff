@@ -47,7 +47,6 @@
 
 #include "third_party/absl/log/log.h"
 #include "third_party/absl/status/status.h"
-#include "third_party/absl/status/status_macros.h"
 #include "third_party/absl/status/statusor.h"
 #include "third_party/absl/strings/ascii.h"
 #include "third_party/absl/strings/match.h"
@@ -73,6 +72,7 @@
 #include "third_party/zynamics/bindiff/match/flow_graph.h"
 #include "third_party/zynamics/bindiff/reader.h"
 #include "third_party/zynamics/bindiff/sqlite.h"
+#include "third_party/zynamics/bindiff/status_macros.h"
 #include "third_party/zynamics/bindiff/version.h"
 #include "third_party/zynamics/binexport/ida/digest.h"
 #include "third_party/zynamics/binexport/ida/log_sink.h"

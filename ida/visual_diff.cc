@@ -40,7 +40,6 @@
 #include "third_party/absl/cleanup/cleanup.h"
 #include "third_party/absl/functional/function_ref.h"
 #include "third_party/absl/status/status.h"
-#include "third_party/absl/status/status_macros.h"
 #include "third_party/absl/strings/str_cat.h"
 #include "third_party/absl/strings/string_view.h"
 #include "third_party/absl/time/clock.h"
@@ -49,6 +48,7 @@
 #include "third_party/zynamics/bindiff/flow_graph.h"
 #include "third_party/zynamics/bindiff/match/context.h"
 #include "third_party/zynamics/bindiff/start_ui.h"
+#include "third_party/zynamics/bindiff/status_macros.h"
 #include "third_party/zynamics/binexport/util/filesystem.h"
 
 namespace security::bindiff {

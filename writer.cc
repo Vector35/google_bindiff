@@ -17,7 +17,7 @@
 #include <memory>
 
 #include "third_party/absl/status/status.h"
-#include "third_party/absl/status/status_macros.h"
+#include "third_party/zynamics/bindiff/status_macros.h"
 
 namespace security::bindiff {
 

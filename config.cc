@@ -30,11 +30,11 @@
 
 #include "third_party/absl/container/flat_hash_set.h"
 #include "third_party/absl/status/status.h"
-#include "third_party/absl/status/status_macros.h"
 #include "third_party/absl/status/statusor.h"
 #include "third_party/absl/strings/str_cat.h"
 #include "third_party/absl/strings/string_view.h"
 #include "third_party/zynamics/bindiff/config_defaults.h"
+#include "third_party/zynamics/bindiff/status_macros.h"
 #include "third_party/zynamics/bindiff/version.h"
 #include "third_party/zynamics/binexport/util/filesystem.h"
 #include "third_party/zynamics/binexport/util/process.h"

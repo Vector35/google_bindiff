@@ -32,3 +32,14 @@ if(BINDIFF_ENABLE_IDAPRO)
 endif()
 
 find_package(Protobuf 3.14 REQUIRED) # Make protobuf_generate_cpp available
+
+# Abseil LTS releases before status_macros was exported do not provide this
+# target. BinDiff's compatibility header falls back to BinExport's macros.
+if(NOT TARGET absl::status_macros)
+  add_library(bindiff_absl_status_macros INTERFACE)
+  target_link_libraries(bindiff_absl_status_macros INTERFACE
+    absl::status
+    absl::statusor
+  )
+  add_library(absl::status_macros ALIAS bindiff_absl_status_macros)
+endif()
