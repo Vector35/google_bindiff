@@ -138,13 +138,15 @@ set_target_properties(bindiff_version PROPERTIES
 file(READ bindiff.json bindiff_BINDIFF_JSON)
 configure_file(config_defaults.h.in config_defaults.h @ONLY)
 
-protobuf_generate_cpp(bd_config_proto bd_config_proto_h
-  bindiff_config.proto
+protobuf_generate(
+  PROTOS bindiff_config.proto
+  LANGUAGE cpp
+  APPEND_PATH
+  OUT_VAR bd_config_proto_srcs
 )
 
 add_library(bindiff_config STATIC
-  "${bd_config_proto_h}"
-  "${bd_config_proto}"
+  ${bd_config_proto_srcs}
   config.cc
   config.h
   ${CMAKE_CURRENT_BINARY_DIR}/config_defaults.h
