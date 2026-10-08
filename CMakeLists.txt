@@ -81,10 +81,9 @@ create_directory_symlink(
   "${sqlite_SOURCE_DIR}"
   "${BINDIFF_BINARY_DIR}/src_include/third_party/sqlite/src"
 )
-create_directory_symlink(
-  "${BINDIFF_BINARY_DIR}"
-  "${BINDIFF_BINARY_DIR}/gen_include/third_party/zynamics/bindiff"
-)
+set(BINDIFF_GEN_INCLUDE_DIR
+    "${BINDIFF_BINARY_DIR}/gen_include/third_party/zynamics/bindiff")
+file(MAKE_DIRECTORY "${BINDIFF_GEN_INCLUDE_DIR}")
 
 # Set revision number, if applicable
 if(NOT $ENV{KOKORO_PIPER_CHANGELIST} STREQUAL "")
@@ -136,12 +135,14 @@ set_target_properties(bindiff_version PROPERTIES
 
 # Configuration library
 file(READ bindiff.json bindiff_BINDIFF_JSON)
-configure_file(config_defaults.h.in config_defaults.h @ONLY)
+configure_file(config_defaults.h.in
+               "${BINDIFF_GEN_INCLUDE_DIR}/config_defaults.h" @ONLY)
 
 protobuf_generate(
   PROTOS bindiff_config.proto
   LANGUAGE cpp
   APPEND_PATH
+  PROTOC_OUT_DIR "${BINDIFF_GEN_INCLUDE_DIR}"
   OUT_VAR bd_config_proto_srcs
 )
 
@@ -149,7 +150,7 @@ add_library(bindiff_config STATIC
   ${bd_config_proto_srcs}
   config.cc
   config.h
-  ${CMAKE_CURRENT_BINARY_DIR}/config_defaults.h
+  ${BINDIFF_GEN_INCLUDE_DIR}/config_defaults.h
 )
 target_link_libraries(bindiff_config
   bindiff_version
